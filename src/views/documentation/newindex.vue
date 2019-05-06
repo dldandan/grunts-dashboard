@@ -14,7 +14,7 @@
               <template slot="title">
                 <i class="el-icon-tickets" style="color:#333"></i>属性集
               </template>
-              <el-menu-item-group id="myPaletteDiv2" style="background-color:#fff;height:220px;">
+              <el-menu-item-group id="myPaletteDiv2" style="background-color:#fff;height: 420px;">
               </el-menu-item-group>
             </el-submenu>
             <el-submenu index="3" style="border-bottom: 1px solid #c5c9d2">
@@ -28,21 +28,29 @@
               <template slot="title">
                 <i class="el-icon-rank" style="color:#333"></i>动作
               </template>
-              <el-menu-item-group id="myPaletteDiv4" style="background-color:#fff;height:700px;">
+              <el-menu-item-group id="myPaletteDiv4" style="background-color:#fff;height:737px;">
               </el-menu-item-group>
             </el-submenu>
             <el-submenu index="5" style="border-bottom: 1px solid #c5c9d2">
               <template slot="title">
                 <i class="el-icon-goods" style="color:#333"></i>外部的
               </template>
-              <el-menu-item-group id="myPaletteDiv5" style="background-color:#fff;height:300px;">
+              <el-menu-item-group id="myPaletteDiv5" style="background-color:#fff;height: 455px;">
               </el-menu-item-group>
             </el-submenu>
           </el-menu>
         </el-aside>
-        <el-main>
+        <el-main style="position:relative;">
           <div id="myDiagramDiv" style="width:100%;height: calc(77vh - 35px);">
               
+          </div>
+          <div id="contextMenu">
+            <ul>
+              <li><a href="#" target="_self">详情/编辑</a></li>
+              <li id="delete" @click="cxcommand($event)"><a href="#" target="_self">删除</a></li>
+              <li id="copy" @click="cxcommand($event)"><a href="#" target="_self">复制</a></li>
+              <li id="paste" @click="cxcommand($event)"><a href="#" target="_self">粘贴</a></li>
+            </ul>
           </div>
           <div style="width:260px;height:60px;float:right;margin-right:10px;">
             <el-tooltip content="删除选定的节点或链接" effect="dark" placement="top">
@@ -301,15 +309,15 @@ export default {
       this.myDiagram = MAKE(go.Diagram, 'myDiagramDiv', {
         // isReadOnly: true,
         // initialContentAlignment: go.Spot.Center, // 居中显示
-        hoverDelay: 200,
+        // hoverDelay: 200,
         'undoManager.isEnabled': true, // 支持 Ctrl-Z 和 Ctrl-Y 操作
-        'toolManager.hoverDelay': 100, // tooltip提示显示延时
+        'toolManager.hoverDelay': 200, // tooltip提示显示延时
         'toolManager.toolTipDuration': 10000, // tooltip持续显示时间
         // 'grid.visible': true, // 显示网格
         allowDrop: true,
-        allowDragOut: true,
+        allowDragOut: true
         // allowMove: true, // 允许拖动
-        allowDelete: false // 允许删除选中按backspace
+        // allowDelete: false // 允许删除选中按backspace
         // allowCopy: false,
         // allowClipboard: false,
         // 'toolManager.mouseWheelBehavior': go.ToolManager.WheelZoom, // 有鼠标滚轮事件放大和缩小，而不是向上和向下滚动
@@ -322,7 +330,7 @@ export default {
       })
       // 监听拖拽过来的的事件
       this.myDiagram.addDiagramListener('ExternalObjectsDropped', function(e) {
-        // 写个switch case哪个节点 就让哪个模态窗出来 但是有点麻烦，有什么简单点方法嘛？
+        // 写个switch case哪个节点 就让哪个模态窗出来 但是有点麻烦，有什么简单点方法嘛？改动规则引擎
         e.subject.each(function(n) {
           // 得到从Palette拖过来的节点
           that.xiaoshi = n.data.filtername
@@ -469,275 +477,293 @@ export default {
         }
         // 还有许多许多许多许多判断没写  n(n-1)/2*2 个没写
       })
-      var nodeHoverAdornment = MAKE(go.Adornment, 'Spot',
-        {
-          background: 'transparent',
-          mouseLeave: function(e, obj) {
-            var ad = obj.part
-            ad.adornedPart.removeAdornment('click')
-          }
+      this.myDiagram.nodeTemplateMap.add('Start',
+        MAKE(go.Node, 'Spot', this.nodestyle(), {
+          selectionAdorned: false
         },
-        MAKE(go.Placeholder,
-          {
-            background: 'transparent',
-            isActionable: true,
-            click: function(e, obj) {
-              var node = obj.part.adornedPart
-              node.diagram.select(node)
+        MAKE(go.Panel, 'Auto',
+          MAKE(go.Shape, 'RoundedRectangle',
+            { width: 155, height: 45, fill: '#a3eaa9', strokeWidth: 0.5 }),
+          MAKE(go.TextBlock, 'Start', this.textStyle(),
+            new go.Binding('text'))
+        ),
+        MAKE(go.Panel, 'Auto',
+          { alignment: go.Spot.Right, portId: 'to', fromLinkable: true },
+          MAKE(go.Shape, 'RoundedRectangle',
+            { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
+        ),
+        ))
+      var myContextMenu = MAKE(go.HTMLInfo, {
+        show: this.showContextMenu,
+        mainElement: document.getElementById('contextMenu')
+      })
+      // 点击出现编辑和删除按钮 (还差把“删”字换成icon)
+      var nodeClickAdornment = MAKE(go.Adornment, 'Spot',
+        MAKE(go.Panel, 'Auto',
+          MAKE(go.Shape, { stroke: null, fill: null }),
+          MAKE(go.Placeholder)
+        ),
+        MAKE(go.Panel, 'Position',
+          { alignment: go.Spot.Top, alignmentFocus: go.Spot.Bottom },
+          MAKE('Button',
+            { position: new go.Point(100, 50) },
+            { '_buttonFillOver': '#f83e05', 'ButtonBorder.fill': '#f83e05', 'ButtonBorder.stroke': '#fff', 'ButtonBorder.strokeWidth': 1.5,
+              '_buttonStrokeOver': '#fff', '_buttonFillPressed': '#f83e05', 'ButtonBorder.figure': 'Circle' },
+            { click: function(e, node) {
+              console.log(e)
+              console.log(node.part.adornedPart)
             }
-          }
-        ),
-        MAKE('Button',
-          // { width: 50, height: 25 },
-          { alignment: go.Spot.TopLeft, alignmentFocus: go.Spot.BottomRight },
-          { click: function(e, obj) {
-            // that.dialogCheckRelation = true// 也得判断是哪个节点？然后相应的框出来
-          } },
-          MAKE(go.TextBlock, '编辑')
-        ),
-        MAKE('Button',
-          { alignment: go.Spot.TopRight, alignmentFocus: go.Spot.BottomLeft },
-          { click: function(e, obj) {
-            var node = obj.part
-            // 删除节点 没删掉线
-            console.log(node.data)
-            that.myDiagram.model.removeNodeData(node.data)
-            // that.myDiagram.remove()
-            that.deleteSelectedNode = false
-          } },
-          MAKE(go.TextBlock, '删除')
+            },
+            MAKE(go.TextBlock, '编',
+              { font: '8pt sans-serif', textAlign: 'center', margin: new go.Margin(3, 3, 3, 3), stroke: '#fff' }
+            )
+          ),
+          MAKE('Button',
+            { position: new go.Point(130, 50) },
+            { '_buttonFillOver': '#f83e05', 'ButtonBorder.fill': '#f83e05', 'ButtonBorder.stroke': '#fff', 'ButtonBorder.strokeWidth': 1.5,
+              '_buttonStrokeOver': '#fff', '_buttonFillPressed': '#f83e05', 'ButtonBorder.figure': 'Circle' },
+            { click: function(e, node) {
+              console.log(e)
+              console.log(node.part.adornedPart)
+            }
+            },
+            MAKE(go.TextBlock, '删',
+              { font: '8pt sans-serif', textAlign: 'center', margin: new go.Margin(3, 3, 3, 3), stroke: '#fff' }
+            )
+          )
         )
       )
-      this.myDiagram.nodeTemplateMap.add('Start',
-        MAKE(go.Node, 'Spot', this.nodestyle(),
-          MAKE(go.Panel, 'Auto',
-            MAKE(go.Shape, 'RoundedRectangle',
-              { width: 155, height: 45, fill: '#a3eaa9', strokeWidth: 0.5 }),
-            MAKE(go.TextBlock, 'Start', this.textStyle(),
-              new go.Binding('text'))
-          ),
-          MAKE(go.Panel, 'Auto',
-            { alignment: go.Spot.Right, portId: 'to', fromLinkable: true },
-            MAKE(go.Shape, 'RoundedRectangle',
-              { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
-          ),
-        ))
       // filter(滤波器)
       this.myDiagram.nodeTemplateMap.add('One',
-        MAKE(go.Node, 'Spot', this.nodestyle(),
-          MAKE(go.Panel, 'Auto',
-            MAKE(go.Shape, 'RoundedRectangle',
-              { width: 155, height: 45, fill: '#f1e861', strokeWidth: 0.5 }),
-            MAKE(go.TextBlock, this.textStyle(),
-              new go.Binding('text', 'filtername'))
+        MAKE(go.Node, 'Spot', this.nodestyle(), {
+          // selectionAdorned: false,
+          contextMenu: myContextMenu,
+          selectionAdornmentTemplate: nodeClickAdornment
+        },
+        MAKE(go.Panel, 'Auto',
+          MAKE(go.Shape, 'RoundedRectangle',
+            { width: 155, height: 45, fill: '#f1e861', strokeWidth: 0.5, name: 'FILTER' },
           ),
+          MAKE(go.TextBlock, this.textStyle(),
+            new go.Binding('text', 'filtername')),
+        ),
           // 两边端口的样式
-          MAKE(go.Panel, 'Auto',
-            { alignment: go.Spot.Left, portId: 'to', fromLinkable: false, toLinkable: true },
-            MAKE(go.Shape, 'RoundedRectangle',
-              { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
-          ),
-          MAKE(go.Panel, 'Auto',
-            { alignment: go.Spot.Right, portId: 'to', fromLinkable: true, toLinkable: false },
-            MAKE(go.Shape, 'RoundedRectangle',
-              { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
-          ),
-          {
-            // mouseEnter: function(e, node, prev) {
-            //   node.findObject('FILTER').fill = 'rgba(240,240,102,0.7)'
-            // },
-            // mouseLeave: function(e, node, prev) {
-            //   node.findObject('FILTER').fill = '#F0F066'
-            // }
-            // mouseHover: function(e, obj) {
-            //   var node = obj.part
-            //   nodeHoverAdornment.adornedObject = node
-            //   node.addAdornment('mouseHover', nodeHoverAdornment)
-            // }
-            click: function(e, obj) {
-              var node = obj.part
-              nodeHoverAdornment.adornedObject = node
-              node.addAdornment('click', nodeHoverAdornment)
-            }
+        MAKE(go.Panel, 'Auto',
+          { alignment: go.Spot.Left, portId: 'to', fromLinkable: false, toLinkable: true },
+          MAKE(go.Shape, 'RoundedRectangle',
+            { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
+        ),
+        MAKE(go.Panel, 'Auto',
+          { alignment: go.Spot.Right, portId: 'to', fromLinkable: true, toLinkable: false },
+          MAKE(go.Shape, 'RoundedRectangle',
+            { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
+        ),
+        {
+          mouseEnter: function(e, node, prev) {
+            node.findObject('FILTER').fill = 'rgb(250,250,102,1)'
           },
-          {
-            toolTip: MAKE(go.Adornment, 'Spot',
-              MAKE(go.Shape, 'RoundedRectangle',
-                { alignment: go.Spot.TopRight, alignmentFocus: go.Spot.Right },
-                {
-                  // minSize: new go.Size(150, 40),
-                  height: 40,
-                  width: 156,
-                  fill: '#fff'
-                }),
-              MAKE(go.TextBlock,
-                { margin: 4, stroke: 'black', wrap: go.TextBlock.WrapFit }, new go.Binding('text', 'filterZiname'))
-            )
+          mouseLeave: function(e, node, prev) {
+            node.findObject('FILTER').fill = '#f1e861'
           }
+        },
+        {
+          toolTip: MAKE(go.Adornment, 'Spot',
+            { background: 'transparent' },
+            MAKE(go.Placeholder,
+              {
+                background: 'transparent'
+              }),
+            MAKE(go.Panel, 'Vertical',
+              { width: 180, height: 48, background: '#ffffee', defaultStretch: go.GraphObject.Horizontal, alignment: go.Spot.BottomRight, alignmentFocus: go.Spot.BottomLeft },
+              MAKE(go.TextBlock, new go.Binding('text', 'filterZiname'), { margin: 2, textAlign: 'left', font: '8pt Helvetica, Arial, sans-serif', stroke: '#000' }),
+              MAKE(go.TextBlock, new go.Binding('text', 'filterallName'), { margin: 2, textAlign: 'left', font: '8pt Helvetica, Arial, sans-serif', stroke: 'gray' })
+            )
+          )
+        }
         ))
       // Attribute(属性集)
       this.myDiagram.nodeTemplateMap.add('Two',
-        MAKE(go.Node, 'Spot', this.nodestyle(),
-          MAKE(go.Panel, 'Auto',
-            MAKE(go.Shape, 'RoundedRectangle',
-              { width: 155, height: 45, fill: '#cdf14e', strokeWidth: 0.5 }),
-            MAKE(go.TextBlock, this.textStyle(),
-              new go.Binding('text', 'filtername'))
-          ),
-          MAKE(go.Panel, 'Auto',
-            { alignment: go.Spot.Left, portId: 'to', fromLinkable: true, toLinkable: true },
-            MAKE(go.Shape, 'RoundedRectangle',
-              { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
-          ),
-          MAKE(go.Panel, 'Auto',
-            { alignment: go.Spot.Right, portId: 'to', fromLinkable: true, toLinkable: true },
-            MAKE(go.Shape, 'RoundedRectangle',
-              { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
-          ),
-          {
-            click: function(e, obj) {
-              var node = obj.part
-              nodeHoverAdornment.adornedObject = node
-              node.addAdornment('click', nodeHoverAdornment)
-            }
+        MAKE(go.Node, 'Spot', this.nodestyle(), {
+          // selectionAdorned: false,
+          contextMenu: myContextMenu,
+          selectionAdornmentTemplate: nodeClickAdornment
+        },
+        MAKE(go.Panel, 'Auto',
+          MAKE(go.Shape, 'RoundedRectangle',
+            { width: 155, height: 45, fill: '#cdf14e', strokeWidth: 0.5, name: 'Attribute' }),
+          MAKE(go.TextBlock, this.textStyle(),
+            new go.Binding('text', 'filtername'))
+        ),
+        MAKE(go.Panel, 'Auto',
+          { alignment: go.Spot.Left, portId: 'to', fromLinkable: true, toLinkable: true },
+          MAKE(go.Shape, 'RoundedRectangle',
+            { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
+        ),
+        MAKE(go.Panel, 'Auto',
+          { alignment: go.Spot.Right, portId: 'to', fromLinkable: true, toLinkable: true },
+          MAKE(go.Shape, 'RoundedRectangle',
+            { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
+        ),
+        {
+          mouseEnter: function(e, node, prev) {
+            node.findObject('Attribute').fill = 'RGB(216,255,82)'
           },
-          {
-            toolTip: MAKE(go.Adornment, 'Spot',
-              MAKE(go.Shape, 'RoundedRectangle',
-                { alignment: go.Spot.TopRight, alignmentFocus: go.Spot.Right },
-                {
-                  // minSize: new go.Size(150, 40),
-                  height: 40,
-                  width: 156,
-                  fill: '#fff'
-                }),
-              MAKE(go.TextBlock,
-                { margin: 4, stroke: 'black', wrap: go.TextBlock.WrapFit }, new go.Binding('text', 'filterZiname'))
-            )
+          mouseLeave: function(e, node, prev) {
+            node.findObject('Attribute').fill = '#cdf14e'
           }
+        },
+        {
+          toolTip: MAKE(go.Adornment, 'Spot',
+            { background: 'transparent' },
+            MAKE(go.Placeholder,
+              {
+                background: 'transparent'
+              }),
+            MAKE(go.Panel, 'Vertical',
+              { width: 180, height: 48, background: '#ffffee', defaultStretch: go.GraphObject.Horizontal, alignment: go.Spot.BottomRight, alignmentFocus: go.Spot.BottomLeft },
+              MAKE(go.TextBlock, new go.Binding('text', 'filterZiname'), { margin: 4, textAlign: 'left', font: '8pt Helvetica, Arial, sans-serif', stroke: '#000' }),
+              MAKE(go.TextBlock, new go.Binding('text', 'filterallName'), { margin: 4, textAlign: 'left', font: '8pt Helvetica, Arial, sans-serif', stroke: 'gray' })
+            )
+          )
+        }
         ))
       // Change变换
       this.myDiagram.nodeTemplateMap.add('Three',
-        MAKE(go.Node, 'Spot', this.nodestyle(),
-          MAKE(go.Panel, 'Auto',
-            MAKE(go.Shape, 'RoundedRectangle',
-              { width: 155, height: 45, fill: '#79cef1', strokeWidth: 0.5 }),
-            MAKE(go.TextBlock, this.textStyle(),
-              new go.Binding('text', 'filtername'))
-          ),
-          MAKE(go.Panel, 'Auto',
-            { alignment: go.Spot.Left, portId: 'to', fromLinkable: true, toLinkable: true },
-            MAKE(go.Shape, 'RoundedRectangle',
-              { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
-          ),
-          MAKE(go.Panel, 'Auto',
-            { alignment: go.Spot.Right, portId: 'to', fromLinkable: true, toLinkable: true },
-            MAKE(go.Shape, 'RoundedRectangle',
-              { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
-          ),
-          {
-            click: function(e, obj) {
-              var node = obj.part
-              nodeHoverAdornment.adornedObject = node
-              node.addAdornment('click', nodeHoverAdornment)
-            }
+        MAKE(go.Node, 'Spot', this.nodestyle(), {
+          // selectionAdorned: false,
+          contextMenu: myContextMenu,
+          selectionAdornmentTemplate: nodeClickAdornment
+        },
+        MAKE(go.Panel, 'Auto',
+          MAKE(go.Shape, 'RoundedRectangle',
+            { width: 155, height: 45, fill: '#79cef1', strokeWidth: 0.5, name: 'change' }),
+          MAKE(go.TextBlock, this.textStyle(),
+            new go.Binding('text', 'filtername'))
+        ),
+        MAKE(go.Panel, 'Auto',
+          { alignment: go.Spot.Left, portId: 'to', fromLinkable: true, toLinkable: true },
+          MAKE(go.Shape, 'RoundedRectangle',
+            { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
+        ),
+        MAKE(go.Panel, 'Auto',
+          { alignment: go.Spot.Right, portId: 'to', fromLinkable: true, toLinkable: true },
+          MAKE(go.Shape, 'RoundedRectangle',
+            { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
+        ),
+        {
+          mouseEnter: function(e, node, prev) {
+            node.findObject('change').fill = 'RGB(128,218,253)'
           },
-          {
-            toolTip: MAKE(go.Adornment, 'Spot',
-              MAKE(go.Shape, 'RoundedRectangle',
-                { alignment: go.Spot.TopRight, alignmentFocus: go.Spot.Right },
-                {
-                  // minSize: new go.Size(150, 40),
-                  height: 40,
-                  width: 156,
-                  fill: '#fff'
-                }),
-              MAKE(go.TextBlock,
-                { margin: 4, stroke: 'black', wrap: go.TextBlock.WrapFit }, new go.Binding('text', 'filterZiname'))
-            )
+          mouseLeave: function(e, node, prev) {
+            node.findObject('change').fill = '#79cef1'
           }
+        },
+        {
+          toolTip: MAKE(go.Adornment, 'Spot',
+            { background: 'transparent' },
+            MAKE(go.Placeholder,
+              {
+                background: 'transparent'
+              }),
+            MAKE(go.Panel, 'Vertical',
+              { width: 180, height: 48, background: '#ffffee', defaultStretch: go.GraphObject.Horizontal, alignment: go.Spot.BottomRight, alignmentFocus: go.Spot.BottomLeft },
+              MAKE(go.TextBlock, new go.Binding('text', 'filterZiname'), { margin: 2, textAlign: 'left', font: '8pt Helvetica, Arial, sans-serif', stroke: '#000' }),
+              MAKE(go.TextBlock, new go.Binding('text', 'filterallName'), { margin: 2, textAlign: 'left', font: '8pt Helvetica, Arial, sans-serif', stroke: 'gray' })
+            )
+          )
+        }
         ))
       // actions动作
       this.myDiagram.nodeTemplateMap.add('Four',
-        MAKE(go.Node, 'Spot', this.nodestyle(),
-          MAKE(go.Panel, 'Auto',
-            MAKE(go.Shape, 'RoundedRectangle',
-              { width: 155, height: 45, fill: '#f1928f', strokeWidth: 0.5 }),
-            MAKE(go.TextBlock, this.textStyle(),
-              new go.Binding('text', 'filtername'))
-          ),
-          MAKE(go.Panel, 'Auto',
-            { alignment: go.Spot.Left, portId: 'to', fromLinkable: true, toLinkable: true },
-            MAKE(go.Shape, 'RoundedRectangle',
-              { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
-          ),
-          MAKE(go.Panel, 'Auto',
-            { alignment: go.Spot.Right, portId: 'to', fromLinkable: true, toLinkable: true },
-            MAKE(go.Shape, 'RoundedRectangle',
-              { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
-          ),
-          {
-            click: function(e, obj) {
-              var node = obj.part
-              nodeHoverAdornment.adornedObject = node
-              node.addAdornment('click', nodeHoverAdornment)
-            }
+        MAKE(go.Node, 'Spot', this.nodestyle(), {
+          // selectionAdorned: false,
+          contextMenu: myContextMenu,
+          selectionAdornmentTemplate: nodeClickAdornment
+        },
+        MAKE(go.Panel, 'Auto',
+          MAKE(go.Shape, 'RoundedRectangle',
+            { width: 155, height: 45, fill: '#f1928f', strokeWidth: 0.5, name: 'actions' }),
+          MAKE(go.TextBlock, this.textStyle(),
+            new go.Binding('text', 'filtername'))
+        ),
+        MAKE(go.Panel, 'Auto',
+          { alignment: go.Spot.Left, portId: 'to', fromLinkable: true, toLinkable: true },
+          MAKE(go.Shape, 'RoundedRectangle',
+            { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
+        ),
+        MAKE(go.Panel, 'Auto',
+          { alignment: go.Spot.Right, portId: 'to', fromLinkable: true, toLinkable: true },
+          MAKE(go.Shape, 'RoundedRectangle',
+            { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
+        ),
+        {
+          mouseEnter: function(e, node, prev) {
+            node.findObject('actions').fill = 'RGB(241,104,100,0.9)'
           },
-          {
-            toolTip: MAKE(go.Adornment, 'Spot',
-              MAKE(go.Shape, 'RoundedRectangle',
-                { alignment: go.Spot.TopRight, alignmentFocus: go.Spot.Right },
-                {
-                  // minSize: new go.Size(150, 40),
-                  height: 40,
-                  width: 156,
-                  fill: '#fff'
-                }),
-              MAKE(go.TextBlock,
-                { margin: 4, stroke: 'black', wrap: go.TextBlock.WrapFit }, new go.Binding('text', 'filterZiname'))
-            )
+          mouseLeave: function(e, node, prev) {
+            node.findObject('actions').fill = '#f1928f'
           }
+        },
+        {
+          toolTip: MAKE(go.Adornment, 'Spot',
+            { background: 'transparent' },
+            MAKE(go.Placeholder,
+              {
+                background: 'transparent'
+              }),
+            MAKE(go.Panel, 'Vertical',
+              { width: 180, height: 48, background: '#ffffee', defaultStretch: go.GraphObject.Horizontal, alignment: go.Spot.BottomRight, alignmentFocus: go.Spot.BottomLeft },
+              MAKE(go.TextBlock, new go.Binding('text', 'filterZiname'), { margin: 2, textAlign: 'left', font: '8pt Helvetica, Arial, sans-serif', stroke: '#000' }),
+              MAKE(go.TextBlock, new go.Binding('text', 'filterallName'), { margin: 2, textAlign: 'left', font: '8pt Helvetica, Arial, sans-serif', stroke: 'gray' })
+            )
+          )
+        }
         ))
       // External外部的
       this.myDiagram.nodeTemplateMap.add('Five',
-        MAKE(go.Node, 'Spot', this.nodestyle(),
-          MAKE(go.Panel, 'Auto',
-            MAKE(go.Shape, 'RoundedRectangle',
-              { width: 155, height: 45, fill: '#fbc766', strokeWidth: 0.5 }),
-            MAKE(go.TextBlock, this.textStyle(),
-              new go.Binding('text', 'filtername'))
-          ),
-          MAKE(go.Panel, 'Auto',
-            { alignment: go.Spot.Left, portId: 'to', fromLinkable: true, toLinkable: true },
-            MAKE(go.Shape, 'RoundedRectangle',
-              { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
-          ),
-          MAKE(go.Panel, 'Auto',
-            { alignment: go.Spot.Right, portId: 'to', fromLinkable: true, toLinkable: true },
-            MAKE(go.Shape, 'RoundedRectangle',
-              { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
-          ),
-          {
-            click: function(e, obj) {
-              var node = obj.part
-              nodeHoverAdornment.adornedObject = node
-              node.addAdornment('click', nodeHoverAdornment)
-            }
+        MAKE(go.Node, 'Spot', this.nodestyle(), {
+          // selectionAdorned: false,
+          contextMenu: myContextMenu,
+          selectionAdornmentTemplate: nodeClickAdornment
+        },
+        MAKE(go.Panel, 'Auto',
+          MAKE(go.Shape, 'RoundedRectangle',
+            { width: 155, height: 45, fill: '#fbc766', strokeWidth: 0.5, name: 'External' }),
+          MAKE(go.TextBlock, this.textStyle(),
+            new go.Binding('text', 'filtername'))
+        ),
+        MAKE(go.Panel, 'Auto',
+          { alignment: go.Spot.Left, portId: 'to', fromLinkable: true, toLinkable: true },
+          MAKE(go.Shape, 'RoundedRectangle',
+            { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
+        ),
+        MAKE(go.Panel, 'Auto',
+          { alignment: go.Spot.Right, portId: 'to', fromLinkable: true, toLinkable: true },
+          MAKE(go.Shape, 'RoundedRectangle',
+            { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
+        ),
+        {
+          mouseEnter: function(e, node, prev) {
+            node.findObject('External').fill = 'RGB(251,199,42,0.9)'
           },
-          {
-            toolTip: MAKE(go.Adornment, 'Spot',
-              MAKE(go.Shape, 'RoundedRectangle',
-                { alignment: go.Spot.TopRight, alignmentFocus: go.Spot.Right },
-                {
-                  // minSize: new go.Size(150, 40),
-                  height: 40,
-                  width: 156,
-                  fill: '#fff'
-                }),
-              MAKE(go.TextBlock,
-                { margin: 4, stroke: 'black', wrap: go.TextBlock.WrapFit }, new go.Binding('text', 'filterZiname'))
-            )
+          mouseLeave: function(e, node, prev) {
+            node.findObject('External').fill = '#fbc766'
           }
+        },
+        {
+          toolTip: MAKE(go.Adornment, 'Spot',
+            { background: 'transparent' },
+            MAKE(go.Placeholder,
+              {
+                background: 'transparent'
+              }),
+            MAKE(go.Panel, 'Vertical',
+              { width: 180, height: 48, background: '#ffffee', defaultStretch: go.GraphObject.Horizontal, alignment: go.Spot.BottomRight, alignmentFocus: go.Spot.BottomLeft },
+              MAKE(go.TextBlock, new go.Binding('text', 'filterZiname'), { margin: 4, textAlign: 'left', font: '8pt Helvetica, Arial, sans-serif', stroke: '#000' }),
+              MAKE(go.TextBlock, new go.Binding('text', 'filterallName'), { margin: 4, textAlign: 'left', font: '8pt Helvetica, Arial, sans-serif', stroke: 'gray' })
+            )
+          )
+        }
         ))
       // 链接线的构造
       this.myDiagram.linkTemplate = MAKE(go.Link,
@@ -788,7 +814,8 @@ export default {
       for (var i = 0; i < jsonFilter.length; i++) {
         var palettobject = {
           category: 'One',
-          filtername: jsonFilter[i].text
+          filtername: jsonFilter[i].text,
+          filterallName: '滤波器— ' + jsonFilter[i].text
         }
         palettearrayFilter.push(palettobject)
       }
@@ -813,7 +840,8 @@ export default {
       for (var j = 0; j < jsonAttribute.length; j++) {
         var palettobjecta = {
           category: 'Two',
-          filtername: jsonAttribute[j].text
+          filtername: jsonAttribute[j].text,
+          filterallName: '属性集— ' + jsonAttribute[j].text
         }
         palettearrayAttribute.push(palettobjecta)
       }
@@ -830,7 +858,8 @@ export default {
       for (var k = 0; k < jsonChange.length; k++) {
         var objectchange = {
           category: 'Three',
-          filtername: jsonChange[k].text
+          filtername: jsonChange[k].text,
+          filterallName: '变换— ' + jsonChange[k].text
         }
         palettearrayChange.push(objectchange)
       }
@@ -867,7 +896,8 @@ export default {
       for (var m = 0; m < jsonAction.length; m++) {
         var objectaction = {
           category: 'Four',
-          filtername: jsonAction[m].text
+          filtername: jsonAction[m].text,
+          filterallName: '动作— ' + jsonAction[m].text
         }
         palettearrayAction.push(objectaction)
       }
@@ -894,37 +924,158 @@ export default {
       for (var n = 0; n < jsonExternal.length; n++) {
         var objectexternal = {
           category: 'Five',
-          filtername: jsonExternal[n].text
+          filtername: jsonExternal[n].text,
+          filterallName: '外部的— ' + jsonExternal[n].text
         }
         palettearrayExternal.push(objectexternal)
       }
       // 初始化页面左侧的调色板
-      this.myPalette = MAKE(go.Palette, 'myPaletteDiv1',
-        {
-          nodeTemplateMap: this.myDiagram.nodeTemplateMap, // 共享mydiagram使用的模板 但是hover上去也有东西 和右面面板显示一样 正常不一样。
-          model: new go.GraphLinksModel(palettearrayFilter)
-        })
-      this.myPalette = MAKE(go.Palette, 'myPaletteDiv2',
-        {
-          nodeTemplateMap: this.myDiagram.nodeTemplateMap, // 共享mydiagram使用的模板 但是hover上去也有东西 和右面面板显示一样 正常不一样。
-          model: new go.GraphLinksModel(palettearrayAttribute)
-        })
-      this.myPalette = MAKE(go.Palette, 'myPaletteDiv3',
-        {
-          nodeTemplateMap: this.myDiagram.nodeTemplateMap,
-          model: new go.GraphLinksModel(palettearrayChange)
-        })
-      this.myPalette = MAKE(go.Palette, 'myPaletteDiv4',
-        {
-          nodeTemplateMap: this.myDiagram.nodeTemplateMap,
-          model: new go.GraphLinksModel(palettearrayAction)
-        })
-      this.myPalette = MAKE(go.Palette, 'myPaletteDiv5',
-        {
-          nodeTemplateMap: this.myDiagram.nodeTemplateMap,
-          model: new go.GraphLinksModel(palettearrayExternal)
-        })
+      // this.myPalette = MAKE(go.Palette, 'myPaletteDiv1',
+      //   {
+      //     nodeTemplateMap: this.myDiagram.nodeTemplateMap,
+      //     model: new go.GraphLinksModel(palettearrayFilter)
+      //   })
+      var myPalette1 = MAKE(go.Palette, 'myPaletteDiv1')
+      myPalette1.nodeTemplate =
+      MAKE(go.Node, 'Spot', this.nodestyle(), {
+        selectionAdorned: false
+      },
+      MAKE(go.Panel, 'Auto',
+        MAKE(go.Shape, 'RoundedRectangle',
+          { width: 155, height: 45, fill: '#f1e861', strokeWidth: 0.5 }),
+        MAKE(go.TextBlock, this.textStyle(),
+          new go.Binding('text', 'filtername'))
+      ),
+      MAKE(go.Panel, 'Auto',
+        { alignment: go.Spot.Left, portId: 'to', fromLinkable: true, toLinkable: true },
+        MAKE(go.Shape, 'RoundedRectangle',
+          { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
+      ),
+      MAKE(go.Panel, 'Auto',
+        { alignment: go.Spot.Right, portId: 'to', fromLinkable: true, toLinkable: true },
+        MAKE(go.Shape, 'RoundedRectangle',
+          { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
+      )
+      )
+      myPalette1.model.nodeDataArray = palettearrayFilter
+      // this.myPalette = MAKE(go.Palette, 'myPaletteDiv2',
+      //   {
+      //     nodeTemplateMap: this.myDiagram.nodeTemplateMap,
+      //     model: new go.GraphLinksModel(palettearrayAttribute)
+      //   })
+      var myPalette2 = MAKE(go.Palette, 'myPaletteDiv2')
+      myPalette2.nodeTemplate =
+      MAKE(go.Node, 'Spot', this.nodestyle(), {
+        selectionAdorned: false
+      },
+      MAKE(go.Panel, 'Auto',
+        MAKE(go.Shape, 'RoundedRectangle',
+          { width: 155, height: 45, fill: '#cdf14e', strokeWidth: 0.5 }),
+        MAKE(go.TextBlock, this.textStyle(),
+          new go.Binding('text', 'filtername'))
+      ),
+      MAKE(go.Panel, 'Auto',
+        { alignment: go.Spot.Left, portId: 'to', fromLinkable: true, toLinkable: true },
+        MAKE(go.Shape, 'RoundedRectangle',
+          { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
+      ),
+      MAKE(go.Panel, 'Auto',
+        { alignment: go.Spot.Right, portId: 'to', fromLinkable: true, toLinkable: true },
+        MAKE(go.Shape, 'RoundedRectangle',
+          { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
+      )
+      )
+      myPalette2.model.nodeDataArray = palettearrayAttribute
+      // this.myPalette = MAKE(go.Palette, 'myPaletteDiv3',
+      //   {
+      //     nodeTemplateMap: this.myDiagram.nodeTemplateMap,
+      //     model: new go.GraphLinksModel(palettearrayChange)
+      //   })
+      var myPalette3 = MAKE(go.Palette, 'myPaletteDiv3')
+      myPalette3.nodeTemplate =
+      MAKE(go.Node, 'Spot', this.nodestyle(), {
+        selectionAdorned: false
+      },
+      MAKE(go.Panel, 'Auto',
+        MAKE(go.Shape, 'RoundedRectangle',
+          { width: 155, height: 45, fill: '#79cef1', strokeWidth: 0.5 }),
+        MAKE(go.TextBlock, this.textStyle(),
+          new go.Binding('text', 'filtername'))
+      ),
+      MAKE(go.Panel, 'Auto',
+        { alignment: go.Spot.Left, portId: 'to', fromLinkable: true, toLinkable: true },
+        MAKE(go.Shape, 'RoundedRectangle',
+          { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
+      ),
+      MAKE(go.Panel, 'Auto',
+        { alignment: go.Spot.Right, portId: 'to', fromLinkable: true, toLinkable: true },
+        MAKE(go.Shape, 'RoundedRectangle',
+          { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
+      )
+      )
+      myPalette3.model.nodeDataArray = palettearrayChange
+      // this.myPalette = MAKE(go.Palette, 'myPaletteDiv4',
+      //   {
+      //     nodeTemplateMap: this.myDiagram.nodeTemplateMap,
+      //     model: new go.GraphLinksModel(palettearrayAction)
+      //   })
+      var myPalette4 = MAKE(go.Palette, 'myPaletteDiv4')
+      myPalette4.nodeTemplate =
+      MAKE(go.Node, 'Spot', this.nodestyle(), {
+        selectionAdorned: false
+      },
+      MAKE(go.Panel, 'Auto',
+        MAKE(go.Shape, 'RoundedRectangle',
+          { width: 155, height: 45, fill: '#f1928f', strokeWidth: 0.5 }),
+        MAKE(go.TextBlock, this.textStyle(),
+          new go.Binding('text', 'filtername'))
+      ),
+      MAKE(go.Panel, 'Auto',
+        { alignment: go.Spot.Left, portId: 'to', fromLinkable: true, toLinkable: true },
+        MAKE(go.Shape, 'RoundedRectangle',
+          { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
+      ),
+      MAKE(go.Panel, 'Auto',
+        { alignment: go.Spot.Right, portId: 'to', fromLinkable: true, toLinkable: true },
+        MAKE(go.Shape, 'RoundedRectangle',
+          { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
+      )
+      )
+      myPalette4.model.nodeDataArray = palettearrayAction
+      // this.myPalette = MAKE(go.Palette, 'myPaletteDiv5',
+      //   {
+      //     nodeTemplateMap: this.myDiagram.nodeTemplateMap,
+      //     model: new go.GraphLinksModel(palettearrayExternal)
+      //   })
+      var myPalette5 = MAKE(go.Palette, 'myPaletteDiv5')
+      myPalette5.nodeTemplate =
+      MAKE(go.Node, 'Spot', this.nodestyle(), {
+        selectionAdorned: false
+      },
+      MAKE(go.Panel, 'Auto',
+        MAKE(go.Shape, 'RoundedRectangle',
+          { width: 155, height: 45, fill: '#fbc766', strokeWidth: 0.5 }),
+        MAKE(go.TextBlock, this.textStyle(),
+          new go.Binding('text', 'filtername'))
+      ),
+      MAKE(go.Panel, 'Auto',
+        { alignment: go.Spot.Left, portId: 'to', fromLinkable: true, toLinkable: true },
+        MAKE(go.Shape, 'RoundedRectangle',
+          { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
+      ),
+      MAKE(go.Panel, 'Auto',
+        { alignment: go.Spot.Right, portId: 'to', fromLinkable: true, toLinkable: true },
+        MAKE(go.Shape, 'RoundedRectangle',
+          { width: 17, height: 17, fill: '#ccc', stroke: 'gray' })
+      )
+      )
+      myPalette5.model.nodeDataArray = palettearrayExternal
       this.myDiagram.model = new go.GraphLinksModel(this.nodeDataArray, this.linkDataArray)
+      this.myDiagram.contextMenu = myContextMenu
+      document.getElementById('contextMenu').addEventListener('contextmenu', function(e) {
+        e.preventDefault()
+        return false
+      }, false)
     },
     nodestyle() {
       return [
@@ -939,15 +1090,38 @@ export default {
         textAlign: 'center'
       }
     },
+    showContextMenu() {
+      // 键盘命令：
+      var cmd = this.myDiagram.commandHandler
+      document.getElementById('copy').style.display = cmd.canCopySelection() ? 'block' : 'none'
+      document.getElementById('paste').style.display = cmd.canPasteSelection() ? 'block' : 'none'
+      document.getElementById('delete').style.display = cmd.canDeleteSelection() ? 'block' : 'none'
+      document.getElementById('contextMenu').style.display = 'block'
+      var mousePt = this.myDiagram.lastInput.viewPoint
+      document.getElementById('contextMenu').style.left = mousePt.x + 'px'
+      document.getElementById('contextMenu').style.top = mousePt.y + 'px'
+    },
+    cxcommand(event, val) {
+      if (val === undefined) val = event.currentTarget.id
+      var diagram = this.myDiagram
+      switch (val) {
+        case 'copy': diagram.commandHandler.copySelection(); break
+        case 'paste': diagram.commandHandler.pasteSelection(diagram.lastInput.documentPoint); break
+        case 'delete': diagram.commandHandler.deleteSelection(); break
+      }
+      diagram.currentTool.stopTool()
+    },
     dialogCheckRelationChange(val) {
       this.dialogCheckRelation = val
     },
     modifyCheckRelationData(data) {
-      for (var i = 0; i < this.nodeDataArray.length; i++) {
-        if (this.nodeDataArray[i].filtername === 'Check Relation Filter Node') {
-          this.nodeDataArray[i].filterZiname = data
-        }
-      }
+      console.log(data)
+      // 这样写每次拖拽过来check relation filter的tootip都相同啊
+      // for (var i = 0; i < this.nodeDataArray.length; i++) {
+      //   if (this.nodeDataArray[i].filtername === 'Check Relation Filter Node') {
+      //     this.nodeDataArray[i].filterZiname = data
+      //   }
+      // }
     },
     dialogMessageFilterChange(val) {
       this.dialogMessageFilter = val
@@ -1341,12 +1515,66 @@ export default {
 }
 </script>
 
-<style rel="stylesheet/scss" lang="scss" scoped>
-　canvas　{border:0px;outline:none;}
+<style rel="stylesheet/scss" lang="scss">
+  canvas {
+    outline: none;
+  }
   .el-aside {
     color: #333;
   }
   .el-main {
     background-color: #e4e6e833;
   }
+  #contextMenu {
+    z-index: 10002;
+    position: absolute;
+    left: 295.5px;
+    top: 201px;
+    /* left: 5px; */
+    // border: 1px solid #444;
+    background-color: #F5F5F5;
+    display: none;
+    box-shadow: 0 0 8px rgba( 0, 0, 0, .4 );
+    font-size: 16px;
+    font-family: sans-serif;
+    // font-weight: bold;
+  }
+  #contextMenu ul {
+    list-style: none;
+    top: 0;
+    left: 0;
+    margin: 0;
+    padding: 0;
+  }
+  #contextMenu li a {
+    position: relative;
+    min-width: 96px;
+    color: #444;
+    display: inline-block;
+    padding: 10px;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  // #contextMenu li a:hover {
+  //   background: rgba(192, 196, 199, 0.4)
+  // }
+  #contextMenu li:hover {
+    background: #CEDFF2;
+    color: #EEE;
+  }
+  #contextMenu li ul li {
+    display: none;
+  }
+  #contextMenu li ul li a {
+    position: relative;
+    min-width: 60px;
+    padding: 6px;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  #contextMenu li:hover ul li {
+    display: block;
+    margin-left: 0px;
+    margin-top: 0px;
+}
 </style>
